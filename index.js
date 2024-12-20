@@ -1,42 +1,18 @@
-// server/index.js
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const bodyParser = require("body-parser");
+const AWS = require("aws-sdk");
+const dynamoDB = new AWS.DynamoDB.DocumentClient();
+const TABLE_NAME = "UsersData"; // Change to your DynamoDB table name
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-
-// MongoDB connection
-mongoose
-  .connect("mongodb://localhost:27017/userdb", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-
-// User Schema
-const UserSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  viewerID: { type: String, required: true },
-});
-
-// User Model
-const User = mongoose.model("User ", UserSchema);
-
-// Routes
+// ...
 
 // Get all users
 app.get("/api/users", async (req, res) => {
+  const params = {
+    TableName: TABLE_NAME,
+  };
+
   try {
-    const users = await User.find();
-    res.json(users);
+    const data = await dynamoDB.scan(params).promise();
+    res.json(data.Items);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -44,10 +20,15 @@ app.get("/api/users", async (req, res) => {
 
 // Create a new user
 app.post("/api/users", async (req, res) => {
-  const newUser = new User(req.body);
+  const newUser = req.body;
+  const params = {
+    TableName: TABLE_NAME,
+    Item: newUser,
+  };
+
   try {
-    const savedUser = await newUser.save();
-    res.status(201).json(savedUser);
+    await dynamoDB.put(params).promise();
+    res.status(201).json(newUser);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -55,11 +36,28 @@ app.post("/api/users", async (req, res) => {
 
 // Update a user
 app.put("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const params = {
+    TableName: TABLE_NAME,
+    Key: { id }, // Assuming 'id' is the primary key
+    UpdateExpression:
+      "set #name = :name, #email = :email, #viewerID = :viewerID",
+    ExpressionAttributeNames: {
+      "#name": "name",
+      "#email": "email",
+      "#viewerID": "viewerID",
+    },
+    ExpressionAttributeValues: {
+      ":name": req.body.name,
+      ":email": req.body.email,
+      ":viewerID": req.body.viewerID,
+    },
+    ReturnValues: "UPDATED_NEW",
+  };
+
   try {
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
-    res.json(updatedUser);
+    const updatedUser = await dynamoDB.update(params).promise();
+    res.json(updatedUser.Attributes);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -67,15 +65,16 @@ app.put("/api/users/:id", async (req, res) => {
 
 // Delete a user
 app.delete("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const params = {
+    TableName: TABLE_NAME,
+    Key: { id },
+  };
+
   try {
-    await User.findByIdAndDelete(req.params.id);
+    await dynamoDB.delete(params).promise();
     res.sendStatus(204);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-});
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
 });
