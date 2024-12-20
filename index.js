@@ -1,9 +1,10 @@
+const express = require("express");
 const AWS = require("aws-sdk");
 const dynamoDB = new AWS.DynamoDB.DocumentClient();
 const TABLE_NAME = "UsersData"; // Change to your DynamoDB table name
 
 // ...
-
+const app = express();
 // Get all users
 app.get("/api/users", async (req, res) => {
   const params = {
