@@ -1,10 +1,15 @@
 const express = require("express");
-const AWS = require("aws-sdk");
-const dynamoDB = new AWS.DynamoDB.DocumentClient();
+
+const { DynamoDBDocument } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDB } = require("@aws-sdk/client-dynamodb");
+
+const dynamoDB = DynamoDBDocument.from(new DynamoDB());
 const TABLE_NAME = "UsersData"; // Change to your DynamoDB table name
 
 // ...
 const app = express();
+const PORT = process.env.PORT || 5000;
+
 // Get all users
 app.get("/api/users", async (req, res) => {
   const params = {
@@ -12,7 +17,7 @@ app.get("/api/users", async (req, res) => {
   };
 
   try {
-    const data = await dynamoDB.scan(params).promise();
+    const data = await dynamoDB.scan(params);
     res.json(data.Items);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -28,7 +33,7 @@ app.post("/api/users", async (req, res) => {
   };
 
   try {
-    await dynamoDB.put(params).promise();
+    await dynamoDB.put(params);
     res.status(201).json(newUser);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -57,7 +62,7 @@ app.put("/api/users/:id", async (req, res) => {
   };
 
   try {
-    const updatedUser = await dynamoDB.update(params).promise();
+    const updatedUser = await dynamoDB.update(params);
     res.json(updatedUser.Attributes);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -73,9 +78,13 @@ app.delete("/api/users/:id", async (req, res) => {
   };
 
   try {
-    await dynamoDB.delete(params).promise();
+    await dynamoDB.delete(params);
     res.sendStatus(204);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+});
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
