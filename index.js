@@ -2,8 +2,14 @@ const express = require("express");
 
 const { DynamoDBDocument } = require("@aws-sdk/lib-dynamodb");
 const { DynamoDB } = require("@aws-sdk/client-dynamodb");
+const AWS = require("aws-sdk");
+// Set the region
+// JS SDK v3 does not support global configuration.
+// Codemod has attempted to pass values to each service client in this file.
+// You may need to update clients outside of this file, if they use global config.
+AWS.config.update({ region: "eu-north-1" });
 
-const dynamoDB = DynamoDBDocument.from(new DynamoDB());
+const dynamoDB = DynamoDBDocument.from(new DynamoDB({ region: "eu-north-1" }));
 const TABLE_NAME = "UsersData"; // Change to your DynamoDB table name
 
 // ...
